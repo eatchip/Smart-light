@@ -1,0 +1,183 @@
+#include <LWiFi.h>
+#include <WiFiClient.h>
+#include "MCS.h"
+#include <Grove_LED_Bar.h>
+
+// Assign AP ssid / password here
+#define _SSID "cover"
+#define _KEY  "843505285ee"
+
+// Assign device id / key of your test device
+MCSDevice mcs("DVx0tga4", "Q4VC6CVFQr90pmDg");
+
+// Assign channel id 
+// The test device should have 2 channel
+// the first channel should be "Controller" - "On/Off"
+// the secord channel should be "Display" - "On/Off"
+MCSControllerOnOff led("LED_controller");
+MCSDisplayOnOff    remote("LED_display");
+
+#define LIGHT_SENSOR A0
+#define LED_PIN 7
+const int ledPin=12;                 //Connect the LED Grove module to Pin12, Digital 12
+const int thresholdvalue=10;         //The treshold for which the LED should turn on. Setting it lower will make it go on at more light, higher for more darkness
+float Rsensor; //Resistance of sensor in K
+
+Grove_LED_Bar __bar2(3, 2, 0);
+
+void setup() {
+  // setup Serial output at 9600
+  Serial.begin(9600);
+  __bar2.begin();
+  // setup LED/Button pin
+  pinMode(LED_PIN, OUTPUT);
+
+  // setup Wifi connection
+  while(WL_CONNECTED != WiFi.status())
+  {
+    Serial.print("WiFi.begin(");
+    Serial.print(_SSID);
+    Serial.print(",");
+    Serial.print(_KEY);
+    Serial.println(")...");
+    WiFi.begin(_SSID, _KEY);
+  }
+  Serial.println("WiFi connected !!");
+
+  // setup MCS connection
+  mcs.addChannel(led);
+  mcs.addChannel(remote);
+  while(!mcs.connected())
+  {
+    Serial.println("MCS.connect()...");
+    mcs.connect();
+  }
+  Serial.println("MCS connected !!");
+
+  // read LED value from MCS server
+  while(!led.valid())
+  {
+    Serial.println("read LED value from MCS...");
+    led.value();
+  }
+  Serial.print("done, LED value = ");
+  Serial.println(led.value());
+  int sensorValue = analogRead(LIGHT_SENSOR);
+  if(led.value()==1){
+    if(sensorValue > 1000){
+      __bar2.setLevel(1);
+    }
+    else if (sensorValue > 800){
+      __bar2.setLevel(3);
+    }
+    else if (sensorValue > 600){
+      __bar2.setLevel(5);
+    }
+    else if (sensorValue > 400){
+      __bar2.setLevel(7);
+    }
+    else if (sensorValue > 0){
+      __bar2.setLevel(9);
+    }
+  }
+  else{
+    __bar2.setLevel(0);
+  }
+  digitalWrite(LED_PIN, led.value() ? HIGH : LOW);      //
+  //digitalWrite(LED_PIN, led.value() ? 9 : 1);
+}
+
+void loop() {
+  // call process() to allow background processing, add timeout to avoid high cpu usage
+  Serial.print("process(");
+  Serial.print(millis());
+  Serial.println(")");
+  mcs.process(100);
+
+  int sensorValue = analogRead(LIGHT_SENSOR); 
+  Rsensor = (float)(4095-sensorValue)*10/sensorValue;
+  Serial.println("the analog read data is ");
+  Serial.println(sensorValue);
+
+
+      if(sensorValue > 1000){
+        __bar2.setLevel(1);
+      }
+      else if (sensorValue > 800){
+        __bar2.setLevel(3);
+      }
+      else if (sensorValue > 600){
+        __bar2.setLevel(5);
+      }
+      else if (sensorValue > 400){
+        __bar2.setLevel(7);
+      }
+      else if (sensorValue > 0){
+        __bar2.setLevel(9);
+      }
+
+  
+  // updated flag will be cleared in process(), user must check it after process() call.
+  if(led.updated())
+  {
+    Serial.print("LED updated, new value = ");
+    Serial.println(led.value());
+    
+    if(led.value()==1){
+      if(sensorValue > 1000){
+        __bar2.setLevel(1);
+      }
+      else if (sensorValue > 800){
+        __bar2.setLevel(3);
+      }
+      else if (sensorValue > 600){
+        __bar2.setLevel(5);
+      }
+      else if (sensorValue > 400){
+        __bar2.setLevel(7);
+      }
+      else if (sensorValue > 200){
+        __bar2.setLevel(9);
+      }
+    }
+    else{
+    __bar2.setLevel(0);
+    }  /*
+    while(led.value()){
+      if(sensorValue > 1000){
+        __bar2.setLevel(1);
+      }
+      else if (sensorValue > 800){
+        __bar2.setLevel(3);
+      }
+      else if (sensorValue > 600){
+        __bar2.setLevel(5);
+      }
+      else if (sensorValue > 400){
+        __bar2.setLevel(7);
+      }
+      else if (sensorValue > 200){
+        __bar2.setLevel(9);
+      }
+    }*/
+    digitalWrite(LED_PIN, led.value() ? HIGH : LOW);      //
+    //digitalWrite(LED_PIN, led.value() ? 9 : 1);
+    //__bar2.setLevel(5)
+    if(!remote.set(led.value()))
+    {
+      Serial.print("Failed to update remote");
+      Serial.println(remote.value());
+    }
+  }
+
+  delay(2000);
+  // check if need to re-connect
+  while(!mcs.connected())
+  {
+    Serial.println("re-connect to MCS...");
+    mcs.connect();
+    if(mcs.connected())
+      Serial.println("MCS connected !!");
+  }
+}
+
