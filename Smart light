@@ -5,7 +5,7 @@
 
 // Assign AP ssid / password here
 #define _SSID "cover"
-#define _KEY  "843505285ee"
+#define _KEY  " "
 
 // Assign device id / key of your test device
 MCSDevice mcs("DVx0tga4", "Q4VC6CVFQr90pmDg");
